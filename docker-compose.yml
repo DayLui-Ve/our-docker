@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+
+    devnote_db:
+        image: postgres
+        container_name: devnote_db
+        restart: always
+        env_file: 
+            - './docker/postgresql/.env'
+        ports: 
+            - '5432:5432'
+        expose: 
+            - '5432'
+        command: 
+            - '-c'
+            - 'config_file=/etc/postgresql/postgresql.conf'  
+        volumes: 
+            - './docker/postgresql/my-postgres.conf:/etc/postgresql/postgresql.conf'  
+            - 'devnote-data-db:/var/lib/postgresql/data'
+        networks: 
+            - 'devnote-network'
+    devnote_laravel:
+        build: './docker/php/'
+        image: php-laravel:1.0
+        container_name: devnote_laravel
+        restart: always
+        expose: 
+            - '9000'
+        networks: 
+            - 'devnote-network'
+        volumes:
+            - './devnote:/var/www/devnote.local'
+        working_dir: '/var/www/devnote.local'
+        depends_on: 
+            - devnote_db
+        environment:
+            - LANG=es_CO.UTF-8
+            - LC_ALL=es_CO.UTF-8
+            - LANGUAGE=es_CO:es
+    server:
+        image: nginx
+        container_name: server
+        depends_on: 
+            - devnote_laravel
+        restart: always
+        volumes: 
+            - './devnote:/var/www/devnote.local'
+            - './docker/nginx/devnote.local.conf:/etc/nginx/conf.d/devnote.local.conf'
+        ports: 
+            - '80:80'
+        networks: 
+            - 'devnote-network'
+
+networks: 
+    devnote-network:
+        driver: bridge
+
+volumes: 
+    devnote-data-db:
